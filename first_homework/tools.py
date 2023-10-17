@@ -36,11 +36,11 @@ class HomeworkChecker:
 
     def show_homework_3(self):
         result = select_popular_genre_books(self.db_name)
-        print(result)
+        self.printer.column_print(result)
 
     def show_homework_4(self, reader_name):
         return_reader_book_in_lib(self.db_name, reader_name)
 
     def show_homework_5(self):
         result = books_statistics(self.db_name)
-        print(result)
+        self.printer.column_print(result)

@@ -115,7 +115,7 @@ def select_book_count(db_name: str) -> list:
 
 
 '''
-task3
+task3 //сделать только с использованием CTE
 
 Найти информацию о книгах тех жанров, у которых количество уникальных книг в библиотеке максимально.
 Вывести жанр, название книг и их доступное количество. Информацию отсортировать сначала по жанрам в алфавитном порядке,
@@ -123,42 +123,28 @@ task3
 '''
 def select_popular_genre_books(db_name: str) -> pd.DataFrame:
     con = sqlite3.connect(db_name)
+    cursor = con.cursor()
+    result = cursor.execute(
+    '''
 
-    #select genre and count of books
-    genre_books_count_data = pd.read_sql('''
-                                         
-        SELECT
-            genre_id,
-            count(book_id) as count
-        FROM
-            book JOIN genre USING (genre_id)
-        group by genre_id;
-                                         
-    ''', con)
+    SELECT genre_name, title, available_numbers
+    --выделяю столбцы из таблицы с книгами, которая соединена с таблицей где в жанрах наибольшее число уникальных книг
+	from book join (
+        --собираю инфу о жанрах, где больше всего уникальных книг
+		select 
+			DISTINCT genre_id, genre_name,
+			count(title) over book_genre_window as books_count,
+			max(count(title)) over book_genre_window as books_max
+			from book join genre using(genre_id)
+			window book_genre_window as (partition by genre_id)
+			order by books_count desc
+			) as my_book USING (genre_id)
+	order by genre_name, available_numbers, title;
 
-    #getting most popular genres
-    max_books_count = genre_books_count_data['count'].max()
-    popular_genres = list(genre_books_count_data.query(f'count == {max_books_count}')['genre_id'])
-    popular_genres_str = str(popular_genres).replace('[', '').replace(']', '')
-
-    result_data = pd.read_sql('''
-                              
-        SELECT
-            genre_id,
-            genre_name,
-            title, 
-            available_numbers
-        FROM
-            book JOIN genre USING(genre_id)
-        WHERE
-            genre_id IN (:popular_genres)
-        ORDER BY genre_name, available_numbers, title;
-                              
-        ''', con, params={'popular_genres': popular_genres_str})
-    result_data.pop('genre_id')
+    ''').fetchall()
 
     con.close()
-    return result_data
+    return result
 
 
 
@@ -238,42 +224,51 @@ task5
 '''
 def books_statistics(db_name: str) -> pd.DataFrame:
     con = sqlite3.connect(db_name)
+    cursor = con.cursor()
 
-    avg_books_count = int(pd.read_sql('''
+    result = cursor.execute(
+    '''
 
-    SELECT ROUND(AVG(book.available_numbers)) as avg_count
-    from book;
+    SELECT DISTINCT title AS Название_книги,
+	genre_name AS Жанр_книги,
+	publisher_name AS Издательство,
+	"Меньше на " || CAST(avg_count - available_numbers AS INTEGER) AS Отклонение
+	FROM book
+		JOIN genre USING(genre_id)
+		JOIN publisher USING(publisher_id), (
+		select book_id, ROUND(AVG(available_numbers)) AS avg_count
+		FROM book) AS avg_book_count
+		where available_numbers < avg_count
+    --
+    UNION 
+    --
+    SELECT DISTINCT title AS Название_книги,
+        genre_name AS Жанр_книги,
+        publisher_name AS Издательство,
+        "Равно среднему" AS Отклонение
+        FROM book
+            JOIN genre USING(genre_id)
+            JOIN publisher USING(publisher_id), (
+            SELECT book_id, ROUND(AVG(available_numbers)) AS avg_count
+            FROM book) AS avg_book_count
+            where available_numbers = avg_count
+    --
+    UNION 
+    --
+    SELECT DISTINCT title AS Название_книги,
+        genre_name AS Жанр_книги,
+        publisher_name AS Издательство,
+        "Больше на " || CAST(available_numbers - avg_count AS INTEGER) AS Отклонение
+        FROM book
+            JOIN genre USING(genre_id)
+            JOIN publisher USING(publisher_id), (
+            SELECT book_id,
+                ROUND(AVG(available_numbers)) AS avg_count
+                FROM book) AS avg_book_count
+                WHERE available_numbers > avg_count
+        ORDER BY Название_книги, Отклонение;
 
-    ''', con)['avg_count'][0])
+    ''').fetchall()
 
-    data = pd.read_sql('''
-
-    SELECT title, genre_name, publisher_name, book.available_numbers 
-    FROM book
-    JOIN genre USING (genre_id)
-    JOIN publisher USING (publisher_id);
-
-    ''', con)
-
-    available_numbers = list(data['available_numbers'])
-    deviation_numbers = []
-
-    for num in available_numbers:
-        if num < avg_books_count:
-            string = f'меньше на {avg_books_count - num}'
-        elif num == avg_books_count:
-            string = 'равно среднему'
-        else:
-            string = f'больше на {num - avg_books_count}'
-
-        deviation_numbers.append(string)
-
-    data['deviation'] = deviation_numbers
-
-    data.pop('available_numbers')
-
-    data = data.sort_values(by=['title', 'deviation'])
-
-    con.close()
-    return data
+    return result
     

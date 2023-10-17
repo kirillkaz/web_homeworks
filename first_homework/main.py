@@ -7,5 +7,10 @@ if __name__ == '__main__':
 
     home_checker = HomeworkChecker()
     
-    home_checker.show_homework_0()
+    # home_checker.show_homework_0()
+    # home_checker.show_homework_1()
+    # home_checker.show_homework_2()
+    home_checker.show_homework_3()
+    # home_checker.show_homework_4()
+    # home_checker.show_homework_5()
     
