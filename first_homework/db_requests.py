@@ -115,31 +115,31 @@ def select_book_count(db_name: str) -> list:
 
 
 '''
-task3 //сделать только с использованием CTE
-
+task3
+править
 Найти информацию о книгах тех жанров, у которых количество уникальных книг в библиотеке максимально.
 Вывести жанр, название книг и их доступное количество. Информацию отсортировать сначала по жанрам в алфавитном порядке,
 затем по возрастанию доступного количества и, наконец, по названиям книг в алфавитном порядке.
 '''
-def select_popular_genre_books(db_name: str) -> pd.DataFrame:
+def select_popular_genre_books(db_name: str):
     con = sqlite3.connect(db_name)
     cursor = con.cursor()
     result = cursor.execute(
     '''
-
-    SELECT genre_name, title, available_numbers
-    --выделяю столбцы из таблицы с книгами, которая соединена с таблицей где в жанрах наибольшее число уникальных книг
-	from book join (
-        --собираю инфу о жанрах, где больше всего уникальных книг
-		select 
-			DISTINCT genre_id, genre_name,
-			count(title) over book_genre_window as books_count,
-			max(count(title)) over book_genre_window as books_max
-			from book join genre using(genre_id)
-			window book_genre_window as (partition by genre_id)
-			order by books_count desc
-			) as my_book USING (genre_id)
-	order by genre_name, available_numbers, title;
+    --окно для вывода таблицы с жанрами, где больше всего уникальных книг
+    WITH get_unic_books AS (
+        SELECT 
+            DISTINCT genre_id,
+            genre_name,
+            COUNT(title) OVER book_genre_window AS books_count,
+            MAX(COUNT(title)) OVER book_genre_window AS books_max
+            FROM book JOIN genre USING(genre_id)
+            WINDOW book_genre_window AS (PARTITION BY genre_id)
+            ORDER BY books_count DESC
+    )
+    SELECT genre_name, title, available_numbers 
+        FROM book JOIN get_unic_books USING (genre_id)
+        ORDER BY genre_name, available_numbers, title;
 
     ''').fetchall()
 
@@ -206,7 +206,7 @@ def return_reader_book_in_lib(db_name: str, reader_name: str):
 
 '''
 task5
-
+править
 Для каждой книги вывести насколько больше (или меньше) количество ее доступных экземпляров,
 чем округленное до целого среднее количество доступных экземпляров в библиотеке. Вывести название книги, ее жанр,
 в каком издательстве книга опубликована и сообщение, состоящее из двух частей:
