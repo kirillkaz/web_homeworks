@@ -116,7 +116,6 @@ def select_book_count(db_name: str) -> list:
 
 '''
 task3
-править
 Найти информацию о книгах тех жанров, у которых количество уникальных книг в библиотеке максимально.
 Вывести жанр, название книг и их доступное количество. Информацию отсортировать сначала по жанрам в алфавитном порядке,
 затем по возрастанию доступного количества и, наконец, по названиям книг в алфавитном порядке.
@@ -172,7 +171,6 @@ def return_reader_book_in_lib(db_name: str, reader_name: str):
 
     ''')
 
-
     ''' updating book_reader return_date '''
     cur_book_reader = data.fetchone()
     str_date = datetime.date.today()
@@ -198,7 +196,6 @@ def return_reader_book_in_lib(db_name: str, reader_name: str):
         ''', (book_id,))
     con.commit()
 
-
     print(f'{reader_name} успешно вернул книгу!')
     con.close()
 
@@ -206,7 +203,6 @@ def return_reader_book_in_lib(db_name: str, reader_name: str):
 
 '''
 task5
-править
 Для каждой книги вывести насколько больше (или меньше) количество ее доступных экземпляров,
 чем округленное до целого среднее количество доступных экземпляров в библиотеке. Вывести название книги, ее жанр,
 в каком издательстве книга опубликована и сообщение, состоящее из двух частей:
@@ -229,44 +225,22 @@ def books_statistics(db_name: str) -> pd.DataFrame:
     result = cursor.execute(
     '''
 
+    WITH get_avg_books AS(
+    select book_id, ROUND(AVG(available_numbers)) AS avg_count
+    FROM book
+    )
     SELECT DISTINCT title AS Название_книги,
-	genre_name AS Жанр_книги,
-	publisher_name AS Издательство,
-	"Меньше на " || CAST(avg_count - available_numbers AS INTEGER) AS Отклонение
-	FROM book
-		JOIN genre USING(genre_id)
-		JOIN publisher USING(publisher_id), (
-		select book_id, ROUND(AVG(available_numbers)) AS avg_count
-		FROM book) AS avg_book_count
-		where available_numbers < avg_count
-    --
-    UNION 
-    --
-    SELECT DISTINCT title AS Название_книги,
-        genre_name AS Жанр_книги,
-        publisher_name AS Издательство,
-        "Равно среднему" AS Отклонение
-        FROM book
-            JOIN genre USING(genre_id)
-            JOIN publisher USING(publisher_id), (
-            SELECT book_id, ROUND(AVG(available_numbers)) AS avg_count
-            FROM book) AS avg_book_count
-            where available_numbers = avg_count
-    --
-    UNION 
-    --
-    SELECT DISTINCT title AS Название_книги,
-        genre_name AS Жанр_книги,
-        publisher_name AS Издательство,
-        "Больше на " || CAST(available_numbers - avg_count AS INTEGER) AS Отклонение
-        FROM book
-            JOIN genre USING(genre_id)
-            JOIN publisher USING(publisher_id), (
-            SELECT book_id,
-                ROUND(AVG(available_numbers)) AS avg_count
-                FROM book) AS avg_book_count
-                WHERE available_numbers > avg_count
-        ORDER BY Название_книги, Отклонение;
+    genre_name AS Жанр_книги,
+    publisher_name AS Издательство,
+        CASE
+            WHEN avg_count > available_numbers THEN
+            "Меньше на " || CAST(avg_count - available_numbers AS INTEGER)
+            WHEN avg_count < available_numbers THEN
+            "Больше на " || CAST(available_numbers - avg_count AS INTEGER)
+            ELSE "Равно среднему"
+        END AS Отклонение
+    FROM book JOIN genre USING(genre_id)
+    JOIN publisher USING(publisher_id), get_avg_books;
 
     ''').fetchall()
 
