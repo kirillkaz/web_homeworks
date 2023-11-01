@@ -225,22 +225,20 @@ def books_statistics(db_name: str) -> pd.DataFrame:
     result = cursor.execute(
     '''
 
-    WITH get_avg_books AS(
-    select book_id, ROUND(AVG(available_numbers)) AS avg_count
-    FROM book
-    )
     SELECT DISTINCT title AS Название_книги,
     genre_name AS Жанр_книги,
     publisher_name AS Издательство,
         CASE
-            WHEN avg_count > available_numbers THEN
-            "Меньше на " || CAST(avg_count - available_numbers AS INTEGER)
-            WHEN avg_count < available_numbers THEN
-            "Больше на " || CAST(available_numbers - avg_count AS INTEGER)
+            WHEN ROUND(AVG(available_numbers) OVER book_window) > available_numbers THEN
+            "Меньше на " || CAST(ROUND(AVG(available_numbers) OVER book_window)  - available_numbers AS INTEGER)
+            WHEN ROUND(AVG(available_numbers) OVER book_window)  < available_numbers THEN
+            "Больше на " || CAST(available_numbers - ROUND(AVG(available_numbers) OVER book_window)  AS INTEGER)
             ELSE "Равно среднему"
         END AS Отклонение
     FROM book JOIN genre USING(genre_id)
-    JOIN publisher USING(publisher_id), get_avg_books;
+    JOIN publisher USING(publisher_id)
+    WINDOW book_window AS ()
+    ORDER BY Название_книги, Отклонение;
 
     ''').fetchall()
 
