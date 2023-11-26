@@ -1,0 +1,55 @@
+{%  macro first_task(name, item_dict, key_list) %}
+<select multiple>
+    {% for key, value in item_dict.items()%}
+    {% if key in key_list%}
+    <option selected>{{value}}</option>
+    {% else %}
+    <option>{{value}}</option>
+    {% endif %}
+    {% endfor %}
+</select>
+{% endmacro %}
+
+
+{% macro second_task(item_dict, n) %}
+<table>
+    <tr>
+        <th>x</th>
+        <th>f(x)</th>
+        <th>y(x)</th>
+    </tr>
+
+    {% if item_dict['x']|length > n %}
+
+        {% for i in range((n/2)|round|int) %}
+        <tr>
+            <td>{{item_dict['x'][i]}}</td>
+            <td>{{item_dict['f_x'][i]}}</td>
+            <td>{{item_dict['y_x'][i]}}</td>
+        </tr>
+        {%endfor%}
+        <tr>
+            <td>...</td>
+            <td>...</td>
+            <td>...</td>
+        </tr>
+        {% for i in range(n-(n/2)|round|int,0,-1) %}
+        <tr>
+            <td>{{item_dict['x'][item_dict['x']|length-i]}}</td>
+            <td>{{item_dict['f_x'][item_dict['x']|length-i]}}</td>
+            <td>{{item_dict['y_x'][item_dict['x']|length-i]}}</td>
+        </tr>
+        {% endfor %}
+    {% else %}
+
+    {% for i in range(item_dict['x']|length) %}
+    <tr>
+        <td>{{item_dict['x'][i]}}</td>
+        <td>{{item_dict['f_x'][i]}}</td>
+        <td>{{item_dict['y_x'][i]}}</td>
+    </tr>
+    {% endfor %}
+
+    {% endif %}
+</table>
+{% endmacro %}
